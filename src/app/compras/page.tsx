@@ -1,22 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ShoppingList } from "@/lib/types";
-import { currentWeekId } from "@/lib/dateUtils";
+import { addDays, defaultWeekStart, formatWeekRange } from "@/lib/dateUtils";
 import { getShoppingList, saveShoppingList } from "@/lib/store";
 import ShoppingListView from "@/components/ShoppingListView";
 
-export default function ComprasPage() {
+function ComprasContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const weekId = searchParams.get("week") ?? defaultWeekStart();
+
   const [list, setList] = useState<ShoppingList | null>(null);
-  const [loading, setLoading] = useState(true);
-  const weekId = currentWeekId();
+  const [loadedWeekId, setLoadedWeekId] = useState<string | null>(null);
+  const loading = loadedWeekId !== weekId;
 
   useEffect(() => {
     getShoppingList(weekId).then((l) => {
       setList(l);
-      setLoading(false);
+      setLoadedWeekId(weekId);
     });
   }, [weekId]);
+
+  function goToWeek(newWeekId: string) {
+    router.push(`/compras?week=${newWeekId}`);
+  }
 
   async function handleToggle(name: string) {
     if (!list) return;
@@ -36,8 +45,25 @@ export default function ComprasPage() {
     <main className="mx-auto max-w-2xl space-y-6 p-4 sm:p-6">
       <header>
         <h1 className="text-2xl font-semibold text-brand-dark">Lista de compras</h1>
-        <p className="text-sm text-neutral-500">Semana del {weekId}</p>
       </header>
+
+      <div className="flex items-center justify-between gap-2">
+        <button
+          onClick={() => goToWeek(addDays(weekId, -7))}
+          className="rounded-full border border-brand-light px-2 py-1 text-sm text-brand-dark"
+          aria-label="Semana anterior"
+        >
+          ←
+        </button>
+        <p className="text-center text-sm text-neutral-500">Semana del {formatWeekRange(weekId)}</p>
+        <button
+          onClick={() => goToWeek(addDays(weekId, 7))}
+          className="rounded-full border border-brand-light px-2 py-1 text-sm text-brand-dark"
+          aria-label="Semana siguiente"
+        >
+          →
+        </button>
+      </div>
 
       {!list ? (
         <p className="text-sm text-neutral-500">
@@ -47,5 +73,13 @@ export default function ComprasPage() {
         <ShoppingListView list={list} onToggle={handleToggle} />
       )}
     </main>
+  );
+}
+
+export default function ComprasPage() {
+  return (
+    <Suspense fallback={<main className="mx-auto max-w-2xl p-4 sm:p-6">Cargando...</main>}>
+      <ComprasContent />
+    </Suspense>
   );
 }

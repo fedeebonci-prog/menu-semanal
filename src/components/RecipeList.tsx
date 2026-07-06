@@ -23,9 +23,10 @@ const SEASON_LABELS: Record<Recipe["season"], string> = {
 interface Props {
   recipes: Recipe[];
   onDelete: (id: string) => void;
+  onEdit: (recipe: Recipe) => void;
 }
 
-export default function RecipeList({ recipes, onDelete }: Props) {
+export default function RecipeList({ recipes, onDelete, onEdit }: Props) {
   if (recipes.length === 0) {
     return <p className="text-sm text-neutral-500">Todavía no hay recetas cargadas.</p>;
   }
@@ -54,12 +55,20 @@ export default function RecipeList({ recipes, onDelete }: Props) {
               {recipe.ingredients.map((i) => i.name).join(", ")}
             </p>
           </div>
-          <button
-            onClick={() => onDelete(recipe.id)}
-            className="shrink-0 text-xs text-neutral-400 hover:text-red-500"
-          >
-            Eliminar
-          </button>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <button
+              onClick={() => onEdit(recipe)}
+              className="text-xs text-brand-dark underline"
+            >
+              Editar
+            </button>
+            <button
+              onClick={() => onDelete(recipe.id)}
+              className="text-xs text-neutral-400 hover:text-red-500"
+            >
+              Eliminar
+            </button>
+          </div>
         </li>
       ))}
     </ul>

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Recipe, Settings, WeeklyMenu } from "@/lib/types";
 import {
   getRecipes,
@@ -13,18 +14,23 @@ import {
   getShoppingList,
   saveShoppingList,
 } from "@/lib/store";
-import { generateWeeklyMenu, recentRecipeIdsFromMenus } from "@/lib/menuGenerator";
+import { generateWeeklyMenu, recentRecipeIdsFromMenus, regenerateDay } from "@/lib/menuGenerator";
 import { buildShoppingList } from "@/lib/shoppingList";
-import { currentWeekId, WEEKDAY_LABELS } from "@/lib/dateUtils";
+import { addDays, defaultWeekStart, formatWeekRange, WEEKDAY_LABELS } from "@/lib/dateUtils";
 import SettingsPanel from "@/components/SettingsPanel";
 
-export default function Home() {
+function HomeContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const weekId = searchParams.get("week") ?? defaultWeekStart();
+
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [menu, setMenu] = useState<WeeklyMenu | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loadedWeekId, setLoadedWeekId] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
-  const weekId = currentWeekId();
+  const [regeneratingDay, setRegeneratingDay] = useState<number | null>(null);
+  const loading = loadedWeekId !== weekId;
 
   useEffect(() => {
     (async () => {
@@ -32,9 +38,13 @@ export default function Home() {
       setRecipes(r);
       setSettings(s);
       setMenu(m);
-      setLoading(false);
+      setLoadedWeekId(weekId);
     })();
   }, [weekId]);
+
+  function goToWeek(newWeekId: string) {
+    router.push(`/?week=${newWeekId}`);
+  }
 
   function recipeById(id: string | null) {
     return id ? recipes.find((r) => r.id === id) ?? null : null;
@@ -59,6 +69,22 @@ export default function Home() {
 
     setMenu(newMenu);
     setGenerating(false);
+  }
+
+  async function handleRegenerateDay(dayIndex: number) {
+    if (!menu || !settings) return;
+    setRegeneratingDay(dayIndex);
+    const allMenus = await getMenus();
+    const recentIds = recentRecipeIdsFromMenus(allMenus, weekId, 2);
+    const updated = regenerateDay(menu, dayIndex, recipes, settings, recentIds);
+    await saveMenu(updated);
+
+    const previousList = await getShoppingList(weekId);
+    const list = buildShoppingList(updated, recipes, previousList);
+    await saveShoppingList(list);
+
+    setMenu(updated);
+    setRegeneratingDay(null);
   }
 
   async function handleSeasonChange(season: Settings["season"]) {
@@ -93,16 +119,33 @@ export default function Home() {
       />
 
       <section className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-medium text-brand-dark">Semana del {weekId}</h2>
+        <div className="flex items-center justify-between gap-2">
           <button
-            onClick={handleGenerate}
-            disabled={generating}
-            className="rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-50"
+            onClick={() => goToWeek(addDays(weekId, -7))}
+            className="rounded-full border border-brand-light px-2 py-1 text-sm text-brand-dark"
+            aria-label="Semana anterior"
           >
-            {generating ? "Generando..." : menu ? "Regenerar semana" : "Generar semana"}
+            ←
+          </button>
+          <h2 className="text-center text-lg font-medium text-brand-dark">
+            Semana del {formatWeekRange(weekId)}
+          </h2>
+          <button
+            onClick={() => goToWeek(addDays(weekId, 7))}
+            className="rounded-full border border-brand-light px-2 py-1 text-sm text-brand-dark"
+            aria-label="Semana siguiente"
+          >
+            →
           </button>
         </div>
+
+        <button
+          onClick={handleGenerate}
+          disabled={generating}
+          className="w-full rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-50"
+        >
+          {generating ? "Generando..." : menu ? "Regenerar semana" : "Generar semana"}
+        </button>
 
         {!menu && (
           <p className="text-sm text-neutral-500">
@@ -112,17 +155,26 @@ export default function Home() {
 
         {menu && (
           <ul className="divide-y divide-brand-light rounded-lg border border-brand-light bg-white">
-            {menu.days.map((day) => (
+            {menu.days.map((day, index) => (
               <li key={day.date} className="p-3">
                 <div className="flex items-center justify-between">
-                  <span className="font-medium text-brand-dark">
-                    {WEEKDAY_LABELS[day.weekday]}
-                  </span>
-                  {day.isGymDay && (
-                    <span className="rounded-full bg-brand-light px-2 py-0.5 text-xs text-brand-dark">
-                      Gimnasio
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-brand-dark">
+                      {WEEKDAY_LABELS[day.weekday]}
                     </span>
-                  )}
+                    {day.isGymDay && (
+                      <span className="rounded-full bg-brand-light px-2 py-0.5 text-xs text-brand-dark">
+                        Gimnasio
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleRegenerateDay(index)}
+                    disabled={regeneratingDay !== null}
+                    className="text-xs text-brand-dark underline disabled:opacity-50"
+                  >
+                    {regeneratingDay === index ? "Cambiando..." : "Recambiar"}
+                  </button>
                 </div>
                 <p className="text-sm text-neutral-600">
                   Almuerzo: {recipeById(day.almuerzoId)?.name ?? "-"}
@@ -140,10 +192,18 @@ export default function Home() {
         <Link href="/recetas" className="text-brand-dark underline">
           Ver recetas
         </Link>
-        <Link href="/compras" className="text-brand-dark underline">
+        <Link href={`/compras?week=${weekId}`} className="text-brand-dark underline">
           Lista de compras
         </Link>
       </nav>
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<main className="mx-auto max-w-2xl p-4 sm:p-6">Cargando...</main>}>
+      <HomeContent />
+    </Suspense>
   );
 }

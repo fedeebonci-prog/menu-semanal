@@ -14,8 +14,37 @@ export function getMondayOf(d: Date): Date {
   return monday;
 }
 
-export function currentWeekId(): string {
-  return toISODate(getMondayOf(new Date()));
+export function addDays(dateISO: string, days: number): string {
+  const d = new Date(dateISO + "T00:00:00");
+  d.setDate(d.getDate() + days);
+  return toISODate(d);
+}
+
+/**
+ * Sábado y domingo son día de planificación: por defecto conviene mostrar
+ * la semana que arranca el lunes siguiente, no la que ya está terminando.
+ */
+export function defaultWeekStart(): string {
+  const today = new Date();
+  const monday = getMondayOf(today);
+  if (today.getDay() === 6 || today.getDay() === 0) {
+    monday.setDate(monday.getDate() + 7);
+  }
+  return toISODate(monday);
+}
+
+const MONTHS = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
+
+export function formatWeekRange(weekStart: string): string {
+  const start = new Date(weekStart + "T00:00:00");
+  const end = new Date(start.getTime() + 6 * DAY_MS);
+  if (start.getMonth() === end.getMonth()) {
+    return `${start.getDate()} al ${end.getDate()} de ${MONTHS[start.getMonth()]}`;
+  }
+  return `${start.getDate()} de ${MONTHS[start.getMonth()]} al ${end.getDate()} de ${MONTHS[end.getMonth()]}`;
 }
 
 export function weekDates(weekStart: string): string[] {

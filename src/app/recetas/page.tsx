@@ -9,6 +9,7 @@ import RecipeList from "@/components/RecipeList";
 export default function RecetasPage() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
 
   useEffect(() => {
     getRecipes().then((r) => {
@@ -20,11 +21,13 @@ export default function RecetasPage() {
   async function handleSave(recipe: Recipe) {
     await saveRecipe(recipe);
     setRecipes(await getRecipes());
+    setEditingRecipe(null);
   }
 
   async function handleDelete(id: string) {
     await deleteRecipe(id);
     setRecipes(await getRecipes());
+    if (editingRecipe?.id === id) setEditingRecipe(null);
   }
 
   if (loading) {
@@ -38,8 +41,13 @@ export default function RecetasPage() {
         <p className="text-sm text-neutral-500">{recipes.length} recetas cargadas</p>
       </header>
 
-      <RecipeForm onSave={handleSave} />
-      <RecipeList recipes={recipes} onDelete={handleDelete} />
+      <RecipeForm
+        key={editingRecipe?.id ?? "new"}
+        onSave={handleSave}
+        editingRecipe={editingRecipe}
+        onCancelEdit={() => setEditingRecipe(null)}
+      />
+      <RecipeList recipes={recipes} onDelete={handleDelete} onEdit={setEditingRecipe} />
     </main>
   );
 }

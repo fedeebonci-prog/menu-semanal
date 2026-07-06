@@ -78,6 +78,52 @@ export function generateWeeklyMenu({
   };
 }
 
+export function regenerateDay(
+  menu: WeeklyMenu,
+  dayIndex: number,
+  recipes: Recipe[],
+  settings: Settings,
+  recentRecipeIds: string[]
+): WeeklyMenu {
+  const day = menu.days[dayIndex];
+  const usedOtherDays = new Set(
+    menu.days.flatMap((d, i) => (i === dayIndex ? [] : [d.almuerzoId, d.cenaId]))
+      .filter((id): id is string => id !== null)
+  );
+
+  const pickForSlot = (slot: "almuerzo" | "cena", currentId: string | null): string | null => {
+    const pool = recipes.filter(
+      (r) => seasonMatches(r.season, settings.season) && mealTypeMatches(r.mealType, slot)
+    );
+    if (pool.length === 0) return null;
+
+    let candidates = pool.filter((r) => !usedOtherDays.has(r.id) && r.id !== currentId);
+    if (candidates.length === 0) candidates = pool.filter((r) => r.id !== currentId);
+    if (candidates.length === 0) candidates = pool;
+
+    if (day.isGymDay) {
+      const highProteinOnes = candidates.filter((r) => r.highProtein);
+      if (highProteinOnes.length > 0) candidates = highProteinOnes;
+    }
+
+    const notRecent = candidates.filter((r) => !recentRecipeIds.includes(r.id));
+    const finalPool = notRecent.length > 0 ? notRecent : candidates;
+
+    return finalPool[Math.floor(Math.random() * finalPool.length)].id;
+  };
+
+  const newDay: DayPlan = {
+    ...day,
+    almuerzoId: pickForSlot("almuerzo", day.almuerzoId),
+    cenaId: pickForSlot("cena", day.cenaId),
+  };
+
+  return {
+    ...menu,
+    days: menu.days.map((d, i) => (i === dayIndex ? newDay : d)),
+  };
+}
+
 export function recentRecipeIdsFromMenus(
   menus: Record<string, WeeklyMenu>,
   excludeWeekId: string,

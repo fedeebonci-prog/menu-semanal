@@ -33,18 +33,24 @@ const emptyIngredient = (): Ingredient => ({ name: "", quantity: "" });
 
 interface Props {
   onSave: (recipe: Recipe) => Promise<void> | void;
+  editingRecipe?: Recipe | null;
+  onCancelEdit?: () => void;
 }
 
-export default function RecipeForm({ onSave }: Props) {
-  const [name, setName] = useState("");
-  const [proteinType, setProteinType] = useState<ProteinType>("pollo");
-  const [mealType, setMealType] = useState<MealType>("ambos");
-  const [season, setSeason] = useState<Season>("todo_el_anio");
-  const [highProtein, setHighProtein] = useState(false);
-  const [notes, setNotes] = useState("");
-  const [ingredients, setIngredients] = useState<Ingredient[]>([emptyIngredient()]);
+export default function RecipeForm({ onSave, editingRecipe, onCancelEdit }: Props) {
+  const [name, setName] = useState(editingRecipe?.name ?? "");
+  const [proteinType, setProteinType] = useState<ProteinType>(editingRecipe?.proteinType ?? "pollo");
+  const [mealType, setMealType] = useState<MealType>(editingRecipe?.mealType ?? "ambos");
+  const [season, setSeason] = useState<Season>(editingRecipe?.season ?? "todo_el_anio");
+  const [highProtein, setHighProtein] = useState(editingRecipe?.highProtein ?? false);
+  const [notes, setNotes] = useState(editingRecipe?.notes ?? "");
+  const [ingredients, setIngredients] = useState<Ingredient[]>(
+    editingRecipe && editingRecipe.ingredients.length > 0
+      ? editingRecipe.ingredients
+      : [emptyIngredient()]
+  );
   const [caption, setCaption] = useState("");
-  const [fromInstagram, setFromInstagram] = useState(false);
+  const [fromInstagram, setFromInstagram] = useState(editingRecipe?.source === "instagram");
   const [saving, setSaving] = useState(false);
 
   function handleExtract() {
@@ -86,7 +92,7 @@ export default function RecipeForm({ onSave }: Props) {
 
     setSaving(true);
     const recipe: Recipe = {
-      id: newId(),
+      id: editingRecipe?.id ?? newId(),
       name: name.trim(),
       proteinType,
       mealType,
@@ -95,11 +101,12 @@ export default function RecipeForm({ onSave }: Props) {
       ingredients: cleanIngredients,
       notes: notes.trim(),
       source: fromInstagram ? "instagram" : "manual",
-      createdAt: new Date().toISOString(),
+      createdAt: editingRecipe?.createdAt ?? new Date().toISOString(),
     };
     await onSave(recipe);
     setSaving(false);
     reset();
+    if (editingRecipe) onCancelEdit?.();
   }
 
   return (
@@ -238,13 +245,27 @@ export default function RecipeForm({ onSave }: Props) {
         />
       </div>
 
-      <button
-        type="submit"
-        disabled={saving}
-        className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-50"
-      >
-        Guardar receta
-      </button>
+      <div className="flex items-center gap-3">
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-50"
+        >
+          {editingRecipe ? "Guardar cambios" : "Guardar receta"}
+        </button>
+        {editingRecipe && (
+          <button
+            type="button"
+            onClick={() => {
+              reset();
+              onCancelEdit?.();
+            }}
+            className="text-sm text-neutral-500 underline"
+          >
+            Cancelar edición
+          </button>
+        )}
+      </div>
     </form>
   );
 }
