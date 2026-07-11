@@ -13,6 +13,21 @@ export type Season = "verano" | "invierno" | "todo_el_anio";
 
 export type MealType = "almuerzo" | "cena" | "ambos";
 
+export type RecipeCategory =
+  | "principal"
+  | "pasta"
+  | "tarta"
+  | "pizza"
+  | "sandwich"
+  | "entrada"
+  | "acompanamiento"
+  | "sopa"
+  | "guiso"
+  | "ensalada"
+  | "postre";
+
+export type Difficulty = "rapida" | "media" | "elaborada";
+
 export interface Ingredient {
   name: string;
   quantity: string;
@@ -21,9 +36,11 @@ export interface Ingredient {
 export interface Recipe {
   id: string;
   name: string;
+  category: RecipeCategory;
   proteinType: ProteinType;
   mealType: MealType;
   season: Season;
+  difficulty: Difficulty;
   highProtein: boolean;
   ingredients: Ingredient[];
   notes: string;

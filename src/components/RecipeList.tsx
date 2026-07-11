@@ -1,24 +1,7 @@
 "use client";
 
 import { Recipe } from "@/lib/types";
-
-const PROTEIN_LABELS: Record<Recipe["proteinType"], string> = {
-  pollo: "Pollo",
-  carne: "Carne",
-  cerdo: "Cerdo",
-  pescado: "Pescado",
-  vegetariano: "Vegetariano",
-  huevo: "Huevo",
-  legumbre: "Legumbre",
-  pasta: "Pasta",
-  otro: "Otro",
-};
-
-const SEASON_LABELS: Record<Recipe["season"], string> = {
-  verano: "Verano",
-  invierno: "Invierno",
-  todo_el_anio: "Todo el año",
-};
+import { CATEGORY_LABELS, DIFFICULTY_LABELS, PROTEIN_LABELS, SEASON_LABELS } from "@/lib/labels";
 
 interface Props {
   recipes: Recipe[];
@@ -39,10 +22,16 @@ export default function RecipeList({ recipes, onDelete, onEdit }: Props) {
             <p className="font-medium text-brand-dark">{recipe.name}</p>
             <div className="mt-1 flex flex-wrap gap-1 text-xs text-neutral-500">
               <span className="rounded-full bg-brand-light px-2 py-0.5">
+                {CATEGORY_LABELS[recipe.category]}
+              </span>
+              <span className="rounded-full bg-brand-light px-2 py-0.5">
                 {PROTEIN_LABELS[recipe.proteinType]}
               </span>
               <span className="rounded-full bg-brand-light px-2 py-0.5">
                 {SEASON_LABELS[recipe.season]}
+              </span>
+              <span className="rounded-full bg-brand-light px-2 py-0.5">
+                {DIFFICULTY_LABELS[recipe.difficulty]}
               </span>
               {recipe.highProtein && (
                 <span className="rounded-full bg-brand-light px-2 py-0.5">Alta proteína</span>

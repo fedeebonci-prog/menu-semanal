@@ -1,4 +1,4 @@
-import { Recipe, Settings, WeeklyMenu, ShoppingList, ProteinType, MealType, Season } from "./types";
+import { Recipe, Settings, WeeklyMenu, ShoppingList, ProteinType, MealType, Season, RecipeCategory, Difficulty } from "./types";
 import { supabase } from "./supabaseClient";
 
 export function newId(): string {
@@ -10,9 +10,11 @@ export function newId(): string {
 interface RecipeRow {
   id: string;
   name: string;
+  category: string;
   protein_type: string;
   meal_type: string;
   season: string;
+  difficulty: string;
   high_protein: boolean;
   ingredients: Recipe["ingredients"];
   notes: string;
@@ -24,9 +26,11 @@ function rowToRecipe(row: RecipeRow): Recipe {
   return {
     id: row.id,
     name: row.name,
+    category: (row.category ?? "principal") as RecipeCategory,
     proteinType: row.protein_type as ProteinType,
     mealType: row.meal_type as MealType,
     season: row.season as Season,
+    difficulty: (row.difficulty ?? "media") as Difficulty,
     highProtein: row.high_protein,
     ingredients: row.ingredients,
     notes: row.notes ?? "",
@@ -39,9 +43,11 @@ function recipeToRow(recipe: Recipe): RecipeRow {
   return {
     id: recipe.id,
     name: recipe.name,
+    category: recipe.category,
     protein_type: recipe.proteinType,
     meal_type: recipe.mealType,
     season: recipe.season,
+    difficulty: recipe.difficulty,
     high_protein: recipe.highProtein,
     ingredients: recipe.ingredients,
     notes: recipe.notes,

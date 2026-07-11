@@ -1,33 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Ingredient, MealType, ProteinType, Recipe, Season } from "@/lib/types";
+import { Difficulty, Ingredient, MealType, ProteinType, Recipe, RecipeCategory, Season } from "@/lib/types";
 import { newId } from "@/lib/store";
 import { parseIngredientsFromCaption } from "@/lib/instagramParser";
-
-const PROTEIN_OPTIONS: { value: ProteinType; label: string }[] = [
-  { value: "pollo", label: "Pollo" },
-  { value: "carne", label: "Carne" },
-  { value: "cerdo", label: "Cerdo" },
-  { value: "pescado", label: "Pescado" },
-  { value: "vegetariano", label: "Vegetariano" },
-  { value: "huevo", label: "Huevo" },
-  { value: "legumbre", label: "Legumbre" },
-  { value: "pasta", label: "Pasta" },
-  { value: "otro", label: "Otro" },
-];
-
-const MEAL_OPTIONS: { value: MealType; label: string }[] = [
-  { value: "ambos", label: "Almuerzo o cena" },
-  { value: "almuerzo", label: "Solo almuerzo" },
-  { value: "cena", label: "Solo cena" },
-];
-
-const SEASON_OPTIONS: { value: Season; label: string }[] = [
-  { value: "todo_el_anio", label: "Todo el año" },
-  { value: "verano", label: "Verano" },
-  { value: "invierno", label: "Invierno" },
-];
+import {
+  CATEGORY_OPTIONS,
+  DIFFICULTY_OPTIONS,
+  MEAL_OPTIONS,
+  PROTEIN_OPTIONS,
+  SEASON_OPTIONS,
+} from "@/lib/labels";
 
 const emptyIngredient = (): Ingredient => ({ name: "", quantity: "" });
 
@@ -39,9 +22,11 @@ interface Props {
 
 export default function RecipeForm({ onSave, editingRecipe, onCancelEdit }: Props) {
   const [name, setName] = useState(editingRecipe?.name ?? "");
+  const [category, setCategory] = useState<RecipeCategory>(editingRecipe?.category ?? "principal");
   const [proteinType, setProteinType] = useState<ProteinType>(editingRecipe?.proteinType ?? "pollo");
   const [mealType, setMealType] = useState<MealType>(editingRecipe?.mealType ?? "ambos");
   const [season, setSeason] = useState<Season>(editingRecipe?.season ?? "todo_el_anio");
+  const [difficulty, setDifficulty] = useState<Difficulty>(editingRecipe?.difficulty ?? "media");
   const [highProtein, setHighProtein] = useState(editingRecipe?.highProtein ?? false);
   const [notes, setNotes] = useState(editingRecipe?.notes ?? "");
   const [ingredients, setIngredients] = useState<Ingredient[]>(
@@ -73,9 +58,11 @@ export default function RecipeForm({ onSave, editingRecipe, onCancelEdit }: Prop
 
   function reset() {
     setName("");
+    setCategory("principal");
     setProteinType("pollo");
     setMealType("ambos");
     setSeason("todo_el_anio");
+    setDifficulty("media");
     setHighProtein(false);
     setNotes("");
     setIngredients([emptyIngredient()]);
@@ -94,9 +81,11 @@ export default function RecipeForm({ onSave, editingRecipe, onCancelEdit }: Prop
     const recipe: Recipe = {
       id: editingRecipe?.id ?? newId(),
       name: name.trim(),
+      category,
       proteinType,
       mealType,
       season,
+      difficulty,
       highProtein,
       ingredients: cleanIngredients,
       notes: notes.trim(),
@@ -144,6 +133,21 @@ export default function RecipeForm({ onSave, editingRecipe, onCancelEdit }: Prop
         </div>
 
         <div>
+          <label className="mb-1 block text-sm font-medium text-brand-dark">Categoría</label>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value as RecipeCategory)}
+            className="w-full rounded-md border border-neutral-200 p-2 text-sm"
+          >
+            {CATEGORY_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
           <label className="mb-1 block text-sm font-medium text-brand-dark">Proteína principal</label>
           <select
             value={proteinType}
@@ -151,6 +155,21 @@ export default function RecipeForm({ onSave, editingRecipe, onCancelEdit }: Prop
             className="w-full rounded-md border border-neutral-200 p-2 text-sm"
           >
             {PROTEIN_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-brand-dark">Dificultad</label>
+          <select
+            value={difficulty}
+            onChange={(e) => setDifficulty(e.target.value as Difficulty)}
+            className="w-full rounded-md border border-neutral-200 p-2 text-sm"
+          >
+            {DIFFICULTY_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
               </option>
