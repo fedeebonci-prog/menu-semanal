@@ -14,7 +14,11 @@ export type Season = "verano" | "invierno" | "todo_el_anio";
 export type MealType = "almuerzo" | "cena" | "ambos";
 
 export type RecipeCategory =
-  | "principal"
+  | "principal_vaca"
+  | "principal_cerdo"
+  | "principal_pollo"
+  | "principal_pescado"
+  | "principal_veggie"
   | "pasta"
   | "tarta"
   | "pizza"

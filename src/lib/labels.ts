@@ -1,7 +1,11 @@
 import { Difficulty, MealType, ProteinType, RecipeCategory, Season } from "./types";
 
 export const CATEGORY_OPTIONS: { value: RecipeCategory; label: string }[] = [
-  { value: "principal", label: "Principal" },
+  { value: "principal_vaca", label: "Principal con Carne de Vaca" },
+  { value: "principal_cerdo", label: "Principal con Carne de Cerdo" },
+  { value: "principal_pollo", label: "Principal con Pollo" },
+  { value: "principal_pescado", label: "Principal con Pescado" },
+  { value: "principal_veggie", label: "Principal Veggie" },
   { value: "pasta", label: "Pasta" },
   { value: "tarta", label: "Tarta" },
   { value: "pizza", label: "Pizza" },

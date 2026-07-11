@@ -26,7 +26,7 @@ function rowToRecipe(row: RecipeRow): Recipe {
   return {
     id: row.id,
     name: row.name,
-    category: (row.category ?? "principal") as RecipeCategory,
+    category: (row.category ?? "principal_pollo") as RecipeCategory,
     proteinType: row.protein_type as ProteinType,
     mealType: row.meal_type as MealType,
     season: row.season as Season,

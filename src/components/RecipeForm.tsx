@@ -22,7 +22,7 @@ interface Props {
 
 export default function RecipeForm({ onSave, editingRecipe, onCancelEdit }: Props) {
   const [name, setName] = useState(editingRecipe?.name ?? "");
-  const [category, setCategory] = useState<RecipeCategory>(editingRecipe?.category ?? "principal");
+  const [category, setCategory] = useState<RecipeCategory>(editingRecipe?.category ?? "principal_pollo");
   const [proteinType, setProteinType] = useState<ProteinType>(editingRecipe?.proteinType ?? "pollo");
   const [mealType, setMealType] = useState<MealType>(editingRecipe?.mealType ?? "ambos");
   const [season, setSeason] = useState<Season>(editingRecipe?.season ?? "todo_el_anio");
@@ -58,7 +58,7 @@ export default function RecipeForm({ onSave, editingRecipe, onCancelEdit }: Prop
 
   function reset() {
     setName("");
-    setCategory("principal");
+    setCategory("principal_pollo");
     setProteinType("pollo");
     setMealType("ambos");
     setSeason("todo_el_anio");
