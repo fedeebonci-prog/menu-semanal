@@ -48,6 +48,16 @@ export default function RecipesByCategory({ recipes }: Props) {
                               Alta proteína
                             </span>
                           )}
+                          {recipe.highCarb && (
+                            <span className="rounded-full bg-brand-light px-2 py-0.5">
+                              Alta en hidratos
+                            </span>
+                          )}
+                          {recipe.light && (
+                            <span className="rounded-full bg-brand-light px-2 py-0.5">
+                              Liviana
+                            </span>
+                          )}
                         </div>
                         <ul className="text-sm text-neutral-600">
                           {recipe.ingredients.map((ing, idx) => (

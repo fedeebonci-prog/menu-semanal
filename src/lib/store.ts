@@ -16,6 +16,8 @@ interface RecipeRow {
   season: string;
   difficulty: string;
   high_protein: boolean;
+  high_carb: boolean;
+  light: boolean;
   ingredients: Recipe["ingredients"];
   notes: string;
   source: string;
@@ -32,6 +34,8 @@ function rowToRecipe(row: RecipeRow): Recipe {
     season: row.season as Season,
     difficulty: (row.difficulty ?? "media") as Difficulty,
     highProtein: row.high_protein,
+    highCarb: row.high_carb ?? false,
+    light: row.light ?? false,
     ingredients: row.ingredients,
     notes: row.notes ?? "",
     source: row.source as Recipe["source"],
@@ -49,6 +53,8 @@ function recipeToRow(recipe: Recipe): RecipeRow {
     season: recipe.season,
     difficulty: recipe.difficulty,
     high_protein: recipe.highProtein,
+    high_carb: recipe.highCarb,
+    light: recipe.light,
     ingredients: recipe.ingredients,
     notes: recipe.notes,
     source: recipe.source,

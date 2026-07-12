@@ -46,10 +46,6 @@ function HomeContent() {
     router.push(`/?week=${newWeekId}`);
   }
 
-  function recipeById(id: string | null) {
-    return id ? recipes.find((r) => r.id === id) ?? null : null;
-  }
-
   async function handleGenerate() {
     if (!settings) return;
     setGenerating(true);
@@ -69,6 +65,24 @@ function HomeContent() {
 
     setMenu(newMenu);
     setGenerating(false);
+  }
+
+  async function handleManualSelect(dayIndex: number, slot: "almuerzo" | "cena", recipeId: string) {
+    if (!menu) return;
+    const idOrNull = recipeId === "" ? null : recipeId;
+    const updated: WeeklyMenu = {
+      ...menu,
+      days: menu.days.map((d, i) =>
+        i === dayIndex ? { ...d, [slot === "almuerzo" ? "almuerzoId" : "cenaId"]: idOrNull } : d
+      ),
+    };
+    await saveMenu(updated);
+
+    const previousList = await getShoppingList(weekId);
+    const list = buildShoppingList(updated, recipes, previousList);
+    await saveShoppingList(list);
+
+    setMenu(updated);
   }
 
   async function handleRegenerateDay(dayIndex: number) {
@@ -176,12 +190,38 @@ function HomeContent() {
                     {regeneratingDay === index ? "Cambiando..." : "Recambiar"}
                   </button>
                 </div>
-                <p className="text-sm text-neutral-600">
-                  Almuerzo: {recipeById(day.almuerzoId)?.name ?? "-"}
-                </p>
-                <p className="text-sm text-neutral-600">
-                  Cena: {recipeById(day.cenaId)?.name ?? "-"}
-                </p>
+                <div className="mt-1 space-y-1">
+                  <label className="flex items-center gap-2 text-sm text-neutral-600">
+                    <span className="w-16 shrink-0">Almuerzo:</span>
+                    <select
+                      value={day.almuerzoId ?? ""}
+                      onChange={(e) => handleManualSelect(index, "almuerzo", e.target.value)}
+                      className="w-full rounded-md border border-neutral-200 p-1 text-sm"
+                    >
+                      <option value="">-</option>
+                      {recipes.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-neutral-600">
+                    <span className="w-16 shrink-0">Cena:</span>
+                    <select
+                      value={day.cenaId ?? ""}
+                      onChange={(e) => handleManualSelect(index, "cena", e.target.value)}
+                      className="w-full rounded-md border border-neutral-200 p-1 text-sm"
+                    >
+                      <option value="">-</option>
+                      {recipes.map((r) => (
+                        <option key={r.id} value={r.id}>
+                          {r.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
               </li>
             ))}
           </ul>

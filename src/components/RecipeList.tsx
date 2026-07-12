@@ -36,6 +36,12 @@ export default function RecipeList({ recipes, onDelete, onEdit }: Props) {
               {recipe.highProtein && (
                 <span className="rounded-full bg-brand-light px-2 py-0.5">Alta proteína</span>
               )}
+              {recipe.highCarb && (
+                <span className="rounded-full bg-brand-light px-2 py-0.5">Alta en hidratos</span>
+              )}
+              {recipe.light && (
+                <span className="rounded-full bg-brand-light px-2 py-0.5">Liviana</span>
+              )}
               {recipe.source === "instagram" && (
                 <span className="rounded-full bg-brand-light px-2 py-0.5">Instagram</span>
               )}

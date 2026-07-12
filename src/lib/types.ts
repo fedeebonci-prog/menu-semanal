@@ -46,6 +46,8 @@ export interface Recipe {
   season: Season;
   difficulty: Difficulty;
   highProtein: boolean;
+  highCarb: boolean;
+  light: boolean;
   ingredients: Ingredient[];
   notes: string;
   source: "manual" | "instagram";

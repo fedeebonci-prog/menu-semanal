@@ -28,6 +28,8 @@ export default function RecipeForm({ onSave, editingRecipe, onCancelEdit }: Prop
   const [season, setSeason] = useState<Season>(editingRecipe?.season ?? "todo_el_anio");
   const [difficulty, setDifficulty] = useState<Difficulty>(editingRecipe?.difficulty ?? "media");
   const [highProtein, setHighProtein] = useState(editingRecipe?.highProtein ?? false);
+  const [highCarb, setHighCarb] = useState(editingRecipe?.highCarb ?? false);
+  const [light, setLight] = useState(editingRecipe?.light ?? false);
   const [notes, setNotes] = useState(editingRecipe?.notes ?? "");
   const [ingredients, setIngredients] = useState<Ingredient[]>(
     editingRecipe && editingRecipe.ingredients.length > 0
@@ -64,6 +66,8 @@ export default function RecipeForm({ onSave, editingRecipe, onCancelEdit }: Prop
     setSeason("todo_el_anio");
     setDifficulty("media");
     setHighProtein(false);
+    setHighCarb(false);
+    setLight(false);
     setNotes("");
     setIngredients([emptyIngredient()]);
     setCaption("");
@@ -87,6 +91,8 @@ export default function RecipeForm({ onSave, editingRecipe, onCancelEdit }: Prop
       season,
       difficulty,
       highProtein,
+      highCarb,
+      light,
       ingredients: cleanIngredients,
       notes: notes.trim(),
       source: fromInstagram ? "instagram" : "manual",
@@ -208,14 +214,32 @@ export default function RecipeForm({ onSave, editingRecipe, onCancelEdit }: Prop
         </div>
       </div>
 
-      <label className="flex items-center gap-2 text-sm text-brand-dark">
-        <input
-          type="checkbox"
-          checked={highProtein}
-          onChange={(e) => setHighProtein(e.target.checked)}
-        />
-        Rica en proteína (priorizar en días de gimnasio)
-      </label>
+      <div className="space-y-2">
+        <label className="flex items-center gap-2 text-sm text-brand-dark">
+          <input
+            type="checkbox"
+            checked={highProtein}
+            onChange={(e) => setHighProtein(e.target.checked)}
+          />
+          Rica en proteína (priorizar en cenas de días de gimnasio)
+        </label>
+        <label className="flex items-center gap-2 text-sm text-brand-dark">
+          <input
+            type="checkbox"
+            checked={highCarb}
+            onChange={(e) => setHighCarb(e.target.checked)}
+          />
+          Alta en hidratos (priorizar en almuerzos de días de gimnasio)
+        </label>
+        <label className="flex items-center gap-2 text-sm text-brand-dark">
+          <input
+            type="checkbox"
+            checked={light}
+            onChange={(e) => setLight(e.target.checked)}
+          />
+          Liviana (priorizar en días de descanso)
+        </label>
+      </div>
 
       <div>
         <div className="mb-1 flex items-center justify-between">
