@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Recipe } from "@/lib/types";
 import { deleteRecipe, getRecipes, saveRecipe } from "@/lib/store";
 import RecipeForm from "@/components/RecipeForm";
@@ -10,6 +10,12 @@ export default function RecetasPage() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null);
+  const formRef = useRef<HTMLDivElement>(null);
+
+  function handleEdit(recipe: Recipe) {
+    setEditingRecipe(recipe);
+    formRef.current?.scrollIntoView({ block: "start" });
+  }
 
   useEffect(() => {
     getRecipes().then((r) => {
@@ -41,13 +47,15 @@ export default function RecetasPage() {
         <p className="text-sm text-neutral-500">{recipes.length} recetas cargadas</p>
       </header>
 
-      <RecipeForm
-        key={editingRecipe?.id ?? "new"}
-        onSave={handleSave}
-        editingRecipe={editingRecipe}
-        onCancelEdit={() => setEditingRecipe(null)}
-      />
-      <RecipeList recipes={recipes} onDelete={handleDelete} onEdit={setEditingRecipe} />
+      <div ref={formRef}>
+        <RecipeForm
+          key={editingRecipe?.id ?? "new"}
+          onSave={handleSave}
+          editingRecipe={editingRecipe}
+          onCancelEdit={() => setEditingRecipe(null)}
+        />
+      </div>
+      <RecipeList recipes={recipes} onDelete={handleDelete} onEdit={handleEdit} />
     </main>
   );
 }
