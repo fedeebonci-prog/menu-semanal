@@ -14,7 +14,7 @@ import {
   getShoppingList,
   saveShoppingList,
 } from "@/lib/store";
-import { generateWeeklyMenu, recentRecipeIdsFromMenus, regenerateDay } from "@/lib/menuGenerator";
+import { generateWeeklyMenu, isPlannedSlot, recentRecipeIdsFromMenus, regenerateDay } from "@/lib/menuGenerator";
 import { buildShoppingList } from "@/lib/shoppingList";
 import { addDays, defaultWeekStart, formatWeekRange, WEEKDAY_LABELS } from "@/lib/dateUtils";
 import SettingsPanel from "@/components/SettingsPanel";
@@ -182,13 +182,15 @@ function HomeContent() {
                       </span>
                     )}
                   </div>
-                  <button
-                    onClick={() => handleRegenerateDay(index)}
-                    disabled={regeneratingDay !== null}
-                    className="text-xs text-brand-dark underline disabled:opacity-50"
-                  >
-                    {regeneratingDay === index ? "Cambiando..." : "Recambiar"}
-                  </button>
+                  {(isPlannedSlot(day.weekday, "almuerzo") || isPlannedSlot(day.weekday, "cena")) && (
+                    <button
+                      onClick={() => handleRegenerateDay(index)}
+                      disabled={regeneratingDay !== null}
+                      className="text-xs text-brand-dark underline disabled:opacity-50"
+                    >
+                      {regeneratingDay === index ? "Cambiando..." : "Recambiar"}
+                    </button>
+                  )}
                 </div>
                 <div className="mt-1 space-y-1">
                   <label className="flex items-center gap-2 text-sm text-neutral-600">

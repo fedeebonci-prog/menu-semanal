@@ -1,4 +1,4 @@
-import { Recipe, Settings, WeeklyMenu, DayPlan } from "./types";
+import { Recipe, RecipeCategory, Settings, WeeklyMenu, DayPlan } from "./types";
 import { weekDates, weekdayOf } from "./dateUtils";
 
 type Slot = "almuerzo" | "cena";
@@ -19,6 +19,17 @@ function mealTypeMatches(recipeMealType: string, slot: Slot) {
 }
 
 /**
+ * Qué comidas cubre el predictor automático: de almuerzo del lunes a
+ * almuerzo del viernes. Viernes a la noche, sábado y domingo quedan afuera
+ * (se planifican a mano si hace falta).
+ */
+export function isPlannedSlot(weekday: number, slot: Slot): boolean {
+  if (weekday === 0 || weekday === 6) return false; // domingo, sábado
+  if (weekday === 5 && slot === "cena") return false; // viernes a la noche
+  return true;
+}
+
+/**
  * Narrows candidates by a nutritional preference, but only if that leaves at
  * least one option — otherwise keeps the wider set. Días de gimnasio piden
  * hidratos al mediodía y proteína a la noche; días de descanso piden platos
@@ -33,6 +44,63 @@ function applyNutritionPreference(candidates: Recipe[], slot: Slot, isGymDay: bo
   return light.length > 0 ? light : candidates;
 }
 
+interface PickArgs {
+  recipes: Recipe[];
+  season: string;
+  slot: Slot;
+  isGymDay: boolean;
+  usedRecipeIds: Set<string>;
+  usedCategories: Set<RecipeCategory>;
+  excludeCategory: RecipeCategory | null;
+  prevProteinType: string | null;
+  recentRecipeIds: string[];
+  excludeCurrentId?: string | null;
+}
+
+/**
+ * Elige una receta para un slot aplicando, en orden de prioridad, cada
+ * preferencia solo si deja al menos una opción — así nunca se vacía el
+ * pool por acumular demasiadas restricciones a la vez:
+ * 1) no repetir receta esta semana (se relaja solo si el pool se agotó)
+ * 2) no repetir la categoría del otro plato del mismo día
+ * 3) hidratos/proteína/liviana según día de gimnasio o descanso
+ * 4) no repetir categoría ya usada esta semana
+ * 5) variar la proteína respecto al mismo slot del día anterior
+ * 6) evitar recetas usadas en semanas recientes
+ */
+function pickRecipe(args: PickArgs): Recipe | null {
+  const pool = args.recipes.filter(
+    (r) => seasonMatches(r.season, args.season) && mealTypeMatches(r.mealType, args.slot)
+  );
+  if (pool.length === 0) return null;
+
+  let candidates = pool.filter(
+    (r) => !args.usedRecipeIds.has(r.id) && r.id !== args.excludeCurrentId
+  );
+  if (candidates.length === 0) {
+    candidates = pool.filter((r) => r.id !== args.excludeCurrentId);
+    if (candidates.length === 0) candidates = pool;
+  }
+
+  if (args.excludeCategory) {
+    const differentCategory = candidates.filter((r) => r.category !== args.excludeCategory);
+    if (differentCategory.length > 0) candidates = differentCategory;
+  }
+
+  candidates = applyNutritionPreference(candidates, args.slot, args.isGymDay);
+
+  const newCategory = candidates.filter((r) => !args.usedCategories.has(r.category));
+  if (newCategory.length > 0) candidates = newCategory;
+
+  const varied = candidates.filter((r) => r.proteinType !== args.prevProteinType);
+  if (varied.length > 0) candidates = varied;
+
+  const notRecent = candidates.filter((r) => !args.recentRecipeIds.includes(r.id));
+  const finalPool = notRecent.length > 0 ? notRecent : candidates;
+
+  return finalPool[Math.floor(Math.random() * finalPool.length)];
+}
+
 export function generateWeeklyMenu({
   weekStart,
   recipes,
@@ -40,7 +108,8 @@ export function generateWeeklyMenu({
   recentRecipeIds,
 }: GenerateOptions): WeeklyMenu {
   const dates = weekDates(weekStart);
-  const usedThisWeek = new Set<string>();
+  const usedRecipeIds = new Set<string>();
+  const usedCategories = new Set<RecipeCategory>();
   const previousProteinType: Record<Slot, string | null> = {
     almuerzo: null,
     cena: null,
@@ -50,38 +119,53 @@ export function generateWeeklyMenu({
     const weekday = weekdayOf(date);
     const isGymDay = settings.gymDays.includes(weekday);
 
-    const pickForSlot = (slot: Slot): string | null => {
-      const pool = recipes.filter(
-        (r) => seasonMatches(r.season, settings.season) && mealTypeMatches(r.mealType, slot)
-      );
-      if (pool.length === 0) return null;
+    let almuerzoRecipe: Recipe | null = null;
+    let cenaRecipe: Recipe | null = null;
 
-      // Nunca repetir una receta ya usada esta semana, salvo que el pool
-      // completo (por temporada/tipo de comida) ya esté agotado.
-      const unused = pool.filter((r) => !usedThisWeek.has(r.id));
-      let candidates = unused.length > 0 ? unused : pool;
+    if (isPlannedSlot(weekday, "almuerzo")) {
+      almuerzoRecipe = pickRecipe({
+        recipes,
+        season: settings.season,
+        slot: "almuerzo",
+        isGymDay,
+        usedRecipeIds,
+        usedCategories,
+        excludeCategory: null,
+        prevProteinType: previousProteinType.almuerzo,
+        recentRecipeIds,
+      });
+      if (almuerzoRecipe) {
+        usedRecipeIds.add(almuerzoRecipe.id);
+        usedCategories.add(almuerzoRecipe.category);
+        previousProteinType.almuerzo = almuerzoRecipe.proteinType;
+      }
+    }
 
-      candidates = applyNutritionPreference(candidates, slot, isGymDay);
-
-      const prevProtein = previousProteinType[slot];
-      const varied = candidates.filter((r) => r.proteinType !== prevProtein);
-      if (varied.length > 0) candidates = varied;
-
-      const notRecent = candidates.filter((r) => !recentRecipeIds.includes(r.id));
-      const finalPool = notRecent.length > 0 ? notRecent : candidates;
-
-      const chosen = finalPool[Math.floor(Math.random() * finalPool.length)];
-      usedThisWeek.add(chosen.id);
-      previousProteinType[slot] = chosen.proteinType;
-      return chosen.id;
-    };
+    if (isPlannedSlot(weekday, "cena")) {
+      cenaRecipe = pickRecipe({
+        recipes,
+        season: settings.season,
+        slot: "cena",
+        isGymDay,
+        usedRecipeIds,
+        usedCategories,
+        excludeCategory: almuerzoRecipe?.category ?? null,
+        prevProteinType: previousProteinType.cena,
+        recentRecipeIds,
+      });
+      if (cenaRecipe) {
+        usedRecipeIds.add(cenaRecipe.id);
+        usedCategories.add(cenaRecipe.category);
+        previousProteinType.cena = cenaRecipe.proteinType;
+      }
+    }
 
     return {
       date,
       weekday,
       isGymDay,
-      almuerzoId: pickForSlot("almuerzo"),
-      cenaId: pickForSlot("cena"),
+      almuerzoId: almuerzoRecipe?.id ?? null,
+      cenaId: cenaRecipe?.id ?? null,
     };
   });
 
@@ -102,38 +186,58 @@ export function regenerateDay(
   recentRecipeIds: string[]
 ): WeeklyMenu {
   const day = menu.days[dayIndex];
+
   const usedOtherDays = new Set(
     menu.days.flatMap((d, i) => (i === dayIndex ? [] : [d.almuerzoId, d.cenaId]))
       .filter((id): id is string => id !== null)
   );
 
-  const pickForSlot = (slot: Slot, currentId: string | null): string | null => {
-    const pool = recipes.filter(
-      (r) => seasonMatches(r.season, settings.season) && mealTypeMatches(r.mealType, slot)
-    );
-    if (pool.length === 0) return null;
-
-    const unused = pool.filter((r) => !usedOtherDays.has(r.id) && r.id !== currentId);
-    let candidates: Recipe[];
-    if (unused.length > 0) {
-      candidates = unused;
-    } else {
-      const notCurrent = pool.filter((r) => r.id !== currentId);
-      candidates = notCurrent.length > 0 ? notCurrent : pool;
+  const usedCategoriesOtherDays = new Set<RecipeCategory>();
+  menu.days.forEach((d, i) => {
+    if (i === dayIndex) return;
+    for (const id of [d.almuerzoId, d.cenaId]) {
+      const recipe = id ? recipes.find((r) => r.id === id) : null;
+      if (recipe) usedCategoriesOtherDays.add(recipe.category);
     }
+  });
 
-    candidates = applyNutritionPreference(candidates, slot, day.isGymDay);
+  let almuerzoRecipe: Recipe | null = null;
+  let cenaRecipe: Recipe | null = null;
 
-    const notRecent = candidates.filter((r) => !recentRecipeIds.includes(r.id));
-    const finalPool = notRecent.length > 0 ? notRecent : candidates;
+  if (isPlannedSlot(day.weekday, "almuerzo")) {
+    almuerzoRecipe = pickRecipe({
+      recipes,
+      season: settings.season,
+      slot: "almuerzo",
+      isGymDay: day.isGymDay,
+      usedRecipeIds: usedOtherDays,
+      usedCategories: usedCategoriesOtherDays,
+      excludeCategory: null,
+      prevProteinType: null,
+      recentRecipeIds,
+      excludeCurrentId: day.almuerzoId,
+    });
+  }
 
-    return finalPool[Math.floor(Math.random() * finalPool.length)].id;
-  };
+  if (isPlannedSlot(day.weekday, "cena")) {
+    cenaRecipe = pickRecipe({
+      recipes,
+      season: settings.season,
+      slot: "cena",
+      isGymDay: day.isGymDay,
+      usedRecipeIds: usedOtherDays,
+      usedCategories: usedCategoriesOtherDays,
+      excludeCategory: almuerzoRecipe?.category ?? null,
+      prevProteinType: null,
+      recentRecipeIds,
+      excludeCurrentId: day.cenaId,
+    });
+  }
 
   const newDay: DayPlan = {
     ...day,
-    almuerzoId: pickForSlot("almuerzo", day.almuerzoId),
-    cenaId: pickForSlot("cena", day.cenaId),
+    almuerzoId: isPlannedSlot(day.weekday, "almuerzo") ? almuerzoRecipe?.id ?? null : day.almuerzoId,
+    cenaId: isPlannedSlot(day.weekday, "cena") ? cenaRecipe?.id ?? null : day.cenaId,
   };
 
   return {
