@@ -49,6 +49,56 @@ function formatQuantity(value: number, unit: string): string {
   return unit ? `${rounded} ${unit}` : `${rounded}`;
 }
 
+type ShoppingCategory = "verdura" | "carne" | "otro";
+
+const CATEGORY_RANK: Record<ShoppingCategory, number> = {
+  verdura: 0,
+  carne: 1,
+  otro: 2,
+};
+
+const VEGGIE_KEYWORDS = [
+  "cebolla", "tomate", "papa", "batata", "zanahoria", "lechuga", "acelga",
+  "zapallo", "zapallito", "brocoli", "morron", "apio", "choclo", "ajo",
+  "calabaza", "espinaca", "rucula", "repollo", "pepino", "berenjena",
+  "remolacha", "puerro", "perejil", "cilantro", "limon", "naranja",
+  "manzana", "banana", "durazno", "pera", "palta", "hongo", "champinon",
+  "kale", "radicheta", "verdura", "ensalada mixta",
+];
+
+const MEAT_KEYWORDS = [
+  "carne", "milanesa", "pollo", "pechuga", "cerdo", "costeleta", "bondiola",
+  "chorizo", "panceta", "jamon", "bife", "pescado", "merluza", "salmon",
+  "atun", "filete", "higado", "rinon", "nugget", "matambre", "asado",
+  "peceto", "osobuco", "pavita", "cordero",
+];
+
+function normalizeForMatch(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase();
+}
+
+function classifyIngredient(name: string): ShoppingCategory {
+  const normalized = normalizeForMatch(name);
+  if (MEAT_KEYWORDS.some((k) => normalized.includes(k))) return "carne";
+  if (VEGGIE_KEYWORDS.some((k) => normalized.includes(k))) return "verdura";
+  return "otro";
+}
+
+/**
+ * Ordena la lista: verduras primero, después carnes, después el resto.
+ * Dentro de cada grupo, alfabético.
+ */
+export function sortShoppingItems(items: ShoppingListItem[]): ShoppingListItem[] {
+  return [...items].sort((a, b) => {
+    const rankDiff = CATEGORY_RANK[classifyIngredient(a.name)] - CATEGORY_RANK[classifyIngredient(b.name)];
+    if (rankDiff !== 0) return rankDiff;
+    return a.name.localeCompare(b.name, "es");
+  });
+}
+
 interface Accumulator {
   name: string;
   haveIt: boolean;
@@ -107,17 +157,21 @@ export function buildShoppingList(
     addIngredientsFrom(day.cenaId);
   }
 
-  const items: ShoppingListItem[] = Array.from(accumulators.values())
-    .map((acc) => ({
-      name: acc.name,
-      haveIt: acc.haveIt,
-      fromRecipes: acc.fromRecipes,
-      quantities: [
-        ...Array.from(acc.totalsByUnit.entries()).map(([unit, total]) => formatQuantity(total, unit)),
-        ...acc.unparsed,
-      ],
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name, "es"));
+  const items: ShoppingListItem[] = Array.from(accumulators.values()).map((acc) => ({
+    name: acc.name,
+    haveIt: acc.haveIt,
+    fromRecipes: acc.fromRecipes,
+    quantities: [
+      ...Array.from(acc.totalsByUnit.entries()).map(([unit, total]) => formatQuantity(total, unit)),
+      ...acc.unparsed,
+    ],
+  }));
 
-  return { weekId: menu.id, items };
+  // Los productos agregados a mano en la lista anterior (no vienen de
+  // ninguna receta de esta semana) se mantienen tal cual.
+  const manualItems = (previous?.items ?? []).filter(
+    (i) => i.fromRecipes.length === 0 && !items.some((it) => it.name.trim().toLowerCase() === i.name.trim().toLowerCase())
+  );
+
+  return { weekId: menu.id, items: sortShoppingItems([...items, ...manualItems]) };
 }

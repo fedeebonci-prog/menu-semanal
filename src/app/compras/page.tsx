@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ShoppingList } from "@/lib/types";
 import { addDays, defaultWeekStart, formatWeekRange } from "@/lib/dateUtils";
 import { getShoppingList, saveShoppingList } from "@/lib/store";
+import { sortShoppingItems } from "@/lib/shoppingList";
 import ShoppingListView from "@/components/ShoppingListView";
 
 function ComprasContent() {
@@ -37,6 +38,38 @@ function ComprasContent() {
     await saveShoppingList(updated);
   }
 
+  async function handleAdd(name: string, quantity: string) {
+    const trimmedName = name.trim();
+    const trimmedQuantity = quantity.trim();
+    if (!trimmedName) return;
+
+    const base: ShoppingList = list ?? { weekId, items: [] };
+    const key = trimmedName.toLowerCase();
+    const existing = base.items.find((i) => i.name.trim().toLowerCase() === key);
+
+    const items = existing
+      ? base.items.map((i) =>
+          i === existing
+            ? { ...i, quantities: trimmedQuantity ? [...i.quantities, trimmedQuantity] : i.quantities }
+            : i
+        )
+      : [
+          ...base.items,
+          { name: trimmedName, haveIt: false, fromRecipes: [], quantities: trimmedQuantity ? [trimmedQuantity] : [] },
+        ];
+
+    const updated: ShoppingList = { ...base, items: sortShoppingItems(items) };
+    setList(updated);
+    await saveShoppingList(updated);
+  }
+
+  async function handleDeleteItem(name: string) {
+    if (!list) return;
+    const updated: ShoppingList = { ...list, items: list.items.filter((i) => i.name !== name) };
+    setList(updated);
+    await saveShoppingList(updated);
+  }
+
   if (loading) {
     return <main className="mx-auto max-w-2xl p-4 sm:p-6">Cargando...</main>;
   }
@@ -65,13 +98,18 @@ function ComprasContent() {
         </button>
       </div>
 
-      {!list ? (
+      {!list && (
         <p className="text-sm text-neutral-500">
-          Todavía no generaste el menú de esta semana. Andá a la pestaña Menú para generarlo.
+          Todavía no generaste el menú de esta semana. Podés generarlo desde la pestaña Menú, o
+          agregar productos sueltos igual.
         </p>
-      ) : (
-        <ShoppingListView list={list} onToggle={handleToggle} />
       )}
+      <ShoppingListView
+        list={list ?? { weekId, items: [] }}
+        onToggle={handleToggle}
+        onAdd={handleAdd}
+        onDelete={handleDeleteItem}
+      />
     </main>
   );
 }
