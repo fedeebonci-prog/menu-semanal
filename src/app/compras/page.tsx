@@ -15,6 +15,7 @@ function ComprasContent() {
 
   const [list, setList] = useState<ShoppingList | null>(null);
   const [loadedWeekId, setLoadedWeekId] = useState<string | null>(null);
+  const [manualInput, setManualInput] = useState("");
   const loading = loadedWeekId !== weekId;
 
   useEffect(() => {
@@ -38,28 +39,19 @@ function ComprasContent() {
     await saveShoppingList(updated);
   }
 
-  async function handleAdd(name: string, quantity: string) {
-    const trimmedName = name.trim();
-    const trimmedQuantity = quantity.trim();
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    const trimmedName = manualInput.trim();
     if (!trimmedName) return;
 
     const base: ShoppingList = list ?? { weekId, items: [] };
     const key = trimmedName.toLowerCase();
     const existing = base.items.find((i) => i.name.trim().toLowerCase() === key);
-
-    const items = existing
-      ? base.items.map((i) =>
-          i === existing
-            ? { ...i, quantities: trimmedQuantity ? [...i.quantities, trimmedQuantity] : i.quantities }
-            : i
-        )
-      : [
-          ...base.items,
-          { name: trimmedName, haveIt: false, fromRecipes: [], quantities: trimmedQuantity ? [trimmedQuantity] : [] },
-        ];
+    const items = existing ? base.items : [...base.items, { name: trimmedName, haveIt: false, fromRecipes: [], quantities: [] }];
 
     const updated: ShoppingList = { ...base, items: sortShoppingItems(items) };
     setList(updated);
+    setManualInput("");
     await saveShoppingList(updated);
   }
 
@@ -71,52 +63,79 @@ function ComprasContent() {
   }
 
   if (loading) {
-    return <main className="mx-auto max-w-2xl p-4 sm:p-6">Cargando...</main>;
+    return <main className="flex flex-1 items-center justify-center text-sm text-muted">Cargando…</main>;
   }
 
+  const items = list?.items ?? [];
+  const checkedCount = items.filter((i) => i.haveIt).length;
+  const progress = items.length > 0 ? `${checkedCount} de ${items.length} tildados` : "Generá el menú para armar la lista";
+
   return (
-    <main className="mx-auto max-w-2xl space-y-6 p-4 sm:p-6">
-      <header>
-        <h1 className="text-2xl font-semibold text-brand-dark">Lista de compras</h1>
+    <main className="flex flex-1 flex-col">
+      <header className="border-b border-border-app px-5 pb-[18px] pt-7">
+        <h1 className="font-serif text-[26px] font-semibold tracking-tight text-foreground-brand">
+          Lista de compras
+        </h1>
+        <p className="mt-1 text-sm text-muted">{progress}</p>
+
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <button
+            onClick={() => goToWeek(addDays(weekId, -7))}
+            className="rounded-full border border-border-app px-2 py-0.5 text-sm text-muted"
+            aria-label="Semana anterior"
+          >
+            ←
+          </button>
+          <span className="text-sm text-muted">Semana del {formatWeekRange(weekId)}</span>
+          <button
+            onClick={() => goToWeek(addDays(weekId, 7))}
+            className="rounded-full border border-border-app px-2 py-0.5 text-sm text-muted"
+            aria-label="Semana siguiente"
+          >
+            →
+          </button>
+        </div>
+
+        <form onSubmit={handleAdd} className="mt-3.5 flex gap-2">
+          <input
+            value={manualInput}
+            onChange={(e) => setManualInput(e.target.value)}
+            placeholder="Agregar producto suelto…"
+            className="flex-1 rounded-xl border p-3 text-sm"
+            style={{ borderColor: "var(--border-input)", background: "var(--card)", color: "var(--foreground)" }}
+          />
+          <button
+            type="submit"
+            disabled={!manualInput.trim()}
+            className="rounded-xl px-4 py-3 text-sm font-bold disabled:opacity-50"
+            style={{ background: "var(--brand)", color: "var(--card)" }}
+          >
+            Agregar
+          </button>
+        </form>
       </header>
 
-      <div className="flex items-center justify-between gap-2">
-        <button
-          onClick={() => goToWeek(addDays(weekId, -7))}
-          className="rounded-full border border-brand-light px-2 py-1 text-sm text-brand-dark"
-          aria-label="Semana anterior"
-        >
-          ←
-        </button>
-        <p className="text-center text-sm text-neutral-500">Semana del {formatWeekRange(weekId)}</p>
-        <button
-          onClick={() => goToWeek(addDays(weekId, 7))}
-          className="rounded-full border border-brand-light px-2 py-1 text-sm text-brand-dark"
-          aria-label="Semana siguiente"
-        >
-          →
-        </button>
-      </div>
-
       {!list && (
-        <p className="text-sm text-neutral-500">
+        <p className="px-5 pt-4 text-sm text-muted">
           Todavía no generaste el menú de esta semana. Podés generarlo desde la pestaña Menú, o
           agregar productos sueltos igual.
         </p>
       )}
-      <ShoppingListView
-        list={list ?? { weekId, items: [] }}
-        onToggle={handleToggle}
-        onAdd={handleAdd}
-        onDelete={handleDeleteItem}
-      />
+
+      <div className="flex-1 px-3.5 pb-24 pt-3.5">
+        <ShoppingListView
+          list={list ?? { weekId, items: [] }}
+          onToggle={handleToggle}
+          onDelete={handleDeleteItem}
+        />
+      </div>
     </main>
   );
 }
 
 export default function ComprasPage() {
   return (
-    <Suspense fallback={<main className="mx-auto max-w-2xl p-4 sm:p-6">Cargando...</main>}>
+    <Suspense fallback={<main className="flex flex-1 items-center justify-center text-sm text-muted">Cargando…</main>}>
       <ComprasContent />
     </Suspense>
   );

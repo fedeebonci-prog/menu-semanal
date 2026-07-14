@@ -178,66 +178,59 @@ export function generateWeeklyMenu({
   };
 }
 
-export function regenerateDay(
+/**
+ * Vuelve a sortear una sola comida puntual (mismo día, misma franja), sin
+ * tocar el resto de la semana. Sigue evitando repetir receta/categoría con
+ * el resto del menú y con la otra comida del mismo día.
+ */
+export function regenerateMeal(
   menu: WeeklyMenu,
   dayIndex: number,
+  slot: Slot,
   recipes: Recipe[],
   settings: Settings,
   recentRecipeIds: string[]
 ): WeeklyMenu {
   const day = menu.days[dayIndex];
+  if (!isPlannedSlot(day.weekday, slot)) return menu;
 
-  const usedOtherDays = new Set(
-    menu.days.flatMap((d, i) => (i === dayIndex ? [] : [d.almuerzoId, d.cenaId]))
+  const currentId = slot === "almuerzo" ? day.almuerzoId : day.cenaId;
+  const otherId = slot === "almuerzo" ? day.cenaId : day.almuerzoId;
+
+  const usedElsewhere = new Set(
+    menu.days
+      .flatMap((d, i) => (i === dayIndex ? (otherId ? [otherId] : []) : [d.almuerzoId, d.cenaId]))
       .filter((id): id is string => id !== null)
   );
 
-  const usedCategoriesOtherDays = new Set<RecipeCategory>();
+  const usedCategoriesElsewhere = new Set<RecipeCategory>();
   menu.days.forEach((d, i) => {
-    if (i === dayIndex) return;
     for (const id of [d.almuerzoId, d.cenaId]) {
+      if (i === dayIndex && id === currentId) continue;
       const recipe = id ? recipes.find((r) => r.id === id) : null;
-      if (recipe) usedCategoriesOtherDays.add(recipe.category);
+      if (recipe) usedCategoriesElsewhere.add(recipe.category);
     }
   });
 
-  let almuerzoRecipe: Recipe | null = null;
-  let cenaRecipe: Recipe | null = null;
+  const otherRecipe = otherId ? recipes.find((r) => r.id === otherId) ?? null : null;
 
-  if (isPlannedSlot(day.weekday, "almuerzo")) {
-    almuerzoRecipe = pickRecipe({
-      recipes,
-      season: settings.season,
-      slot: "almuerzo",
-      isGymDay: day.isGymDay,
-      usedRecipeIds: usedOtherDays,
-      usedCategories: usedCategoriesOtherDays,
-      excludeCategory: null,
-      prevProteinType: null,
-      recentRecipeIds,
-      excludeCurrentId: day.almuerzoId,
-    });
-  }
-
-  if (isPlannedSlot(day.weekday, "cena")) {
-    cenaRecipe = pickRecipe({
-      recipes,
-      season: settings.season,
-      slot: "cena",
-      isGymDay: day.isGymDay,
-      usedRecipeIds: usedOtherDays,
-      usedCategories: usedCategoriesOtherDays,
-      excludeCategory: almuerzoRecipe?.category ?? null,
-      prevProteinType: null,
-      recentRecipeIds,
-      excludeCurrentId: day.cenaId,
-    });
-  }
+  const chosen = pickRecipe({
+    recipes,
+    season: settings.season,
+    slot,
+    isGymDay: day.isGymDay,
+    usedRecipeIds: usedElsewhere,
+    usedCategories: usedCategoriesElsewhere,
+    excludeCategory: otherRecipe?.category ?? null,
+    prevProteinType: null,
+    recentRecipeIds,
+    excludeCurrentId: currentId,
+  });
 
   const newDay: DayPlan = {
     ...day,
-    almuerzoId: isPlannedSlot(day.weekday, "almuerzo") ? almuerzoRecipe?.id ?? null : day.almuerzoId,
-    cenaId: isPlannedSlot(day.weekday, "cena") ? cenaRecipe?.id ?? null : day.cenaId,
+    almuerzoId: slot === "almuerzo" ? chosen?.id ?? null : day.almuerzoId,
+    cenaId: slot === "cena" ? chosen?.id ?? null : day.cenaId,
   };
 
   return {

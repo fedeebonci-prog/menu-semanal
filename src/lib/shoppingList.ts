@@ -99,6 +99,40 @@ export function sortShoppingItems(items: ShoppingListItem[]): ShoppingListItem[]
   });
 }
 
+export interface ShoppingGroup {
+  name: string;
+  items: ShoppingListItem[];
+}
+
+const CATEGORY_GROUP_LABELS: Record<ShoppingCategory, string> = {
+  verdura: "Verduras",
+  carne: "Carnes",
+  otro: "Resto",
+};
+
+/**
+ * Agrupa la lista (ya ordenada) en Verduras / Carnes / Resto, y por último
+ * "Agregados a mano" para los productos sueltos que no vienen de ninguna
+ * receta. Solo incluye grupos con al menos un ítem.
+ */
+export function groupShoppingItems(items: ShoppingListItem[]): ShoppingGroup[] {
+  const manual = items.filter((i) => i.fromRecipes.length === 0);
+  const fromRecipes = items.filter((i) => i.fromRecipes.length > 0);
+
+  const groups: ShoppingGroup[] = (Object.keys(CATEGORY_GROUP_LABELS) as ShoppingCategory[])
+    .map((cat) => ({
+      name: CATEGORY_GROUP_LABELS[cat],
+      items: fromRecipes.filter((i) => classifyIngredient(i.name) === cat),
+    }))
+    .filter((g) => g.items.length > 0);
+
+  if (manual.length > 0) {
+    groups.push({ name: "Agregados a mano", items: manual });
+  }
+
+  return groups;
+}
+
 interface Accumulator {
   name: string;
   haveIt: boolean;

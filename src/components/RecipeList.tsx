@@ -1,7 +1,7 @@
 "use client";
 
 import { Recipe } from "@/lib/types";
-import { CATEGORY_LABELS, DIFFICULTY_LABELS, PROTEIN_LABELS, SEASON_LABELS } from "@/lib/labels";
+import { CATEGORY_LABELS, DIFFICULTY_LABELS, PROTEIN_LABELS } from "@/lib/labels";
 
 interface Props {
   recipes: Recipe[];
@@ -11,59 +11,39 @@ interface Props {
 
 export default function RecipeList({ recipes, onDelete, onEdit }: Props) {
   if (recipes.length === 0) {
-    return <p className="text-sm text-neutral-500">Todavía no hay recetas cargadas.</p>;
+    return <p className="text-sm text-muted">Todavía no hay recetas cargadas.</p>;
   }
 
   return (
-    <ul className="divide-y divide-brand-light rounded-lg border border-brand-light bg-white">
+    <ul className="flex flex-col gap-2">
       {recipes.map((recipe) => (
-        <li key={recipe.id} className="flex items-start justify-between gap-3 p-3">
-          <div>
-            <p className="font-medium text-brand-dark">{recipe.name}</p>
-            <div className="mt-1 flex flex-wrap gap-1 text-xs text-neutral-500">
-              <span className="rounded-full bg-brand-light px-2 py-0.5">
-                {CATEGORY_LABELS[recipe.category]}
-              </span>
-              <span className="rounded-full bg-brand-light px-2 py-0.5">
-                {PROTEIN_LABELS[recipe.proteinType]}
-              </span>
-              <span className="rounded-full bg-brand-light px-2 py-0.5">
-                {SEASON_LABELS[recipe.season]}
-              </span>
-              <span className="rounded-full bg-brand-light px-2 py-0.5">
-                {DIFFICULTY_LABELS[recipe.difficulty]}
-              </span>
-              {recipe.highProtein && (
-                <span className="rounded-full bg-brand-light px-2 py-0.5">Alta proteína</span>
-              )}
-              {recipe.highCarb && (
-                <span className="rounded-full bg-brand-light px-2 py-0.5">Alta en hidratos</span>
-              )}
-              {recipe.light && (
-                <span className="rounded-full bg-brand-light px-2 py-0.5">Liviana</span>
-              )}
-              {recipe.source === "instagram" && (
-                <span className="rounded-full bg-brand-light px-2 py-0.5">Instagram</span>
-              )}
-            </div>
-            <p className="mt-1 text-xs text-neutral-400">
-              {recipe.ingredients.map((i) => i.name).join(", ")}
+        <li
+          key={recipe.id}
+          className="flex items-center gap-2.5 rounded-[14px] border border-border-app bg-card p-3.5"
+        >
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-serif text-[15px] font-semibold text-foreground">
+              {recipe.name}
+            </p>
+            <p className="mt-0.5 truncate text-[12.5px] text-muted">
+              {CATEGORY_LABELS[recipe.category]} · {PROTEIN_LABELS[recipe.proteinType]} ·{" "}
+              {DIFFICULTY_LABELS[recipe.difficulty]}
             </p>
           </div>
-          <div className="flex shrink-0 flex-col items-end gap-1">
-            <button
-              onClick={() => onEdit(recipe)}
-              className="text-xs text-brand-dark underline"
-            >
-              Editar
-            </button>
-            <button
-              onClick={() => onDelete(recipe.id)}
-              className="text-xs text-neutral-400 hover:text-red-500"
-            >
-              Eliminar
-            </button>
-          </div>
+          <button
+            onClick={() => onEdit(recipe)}
+            className="shrink-0 rounded-[9px] px-2.5 py-1.5 text-xs font-bold"
+            style={{ background: "var(--card-muted)", color: "var(--foreground-brand)" }}
+          >
+            Editar
+          </button>
+          <button
+            onClick={() => onDelete(recipe.id)}
+            className="shrink-0 rounded-[9px] px-2.5 py-1.5 text-xs font-bold"
+            style={{ background: "var(--card-muted)", color: "oklch(0.5 0.09 30)" }}
+          >
+            Borrar
+          </button>
         </li>
       ))}
     </ul>

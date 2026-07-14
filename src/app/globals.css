@@ -1,25 +1,126 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7faf7;
-  --foreground: #14261d;
-  --brand: #16794f;
-  --brand-dark: #0f5c3a;
-  --brand-light: #e6f4ec;
+  --outer-bg: oklch(0.93 0.01 90);
+  --background: oklch(0.97 0.015 85);
+  --card: oklch(0.99 0.008 85);
+  --card-muted: oklch(0.955 0.015 85);
+  --border-app: oklch(0.89 0.02 85);
+  --border-input: oklch(0.85 0.02 85);
+
+  --brand: oklch(0.42 0.07 145);
+  --brand-dark: oklch(0.38 0.07 145);
+  --brand-light: oklch(0.9 0.03 145);
+
+  --foreground: oklch(0.3 0.03 90);
+  --foreground-brand: oklch(0.32 0.04 145);
+  --muted: oklch(0.5 0.02 90);
+  --muted-light: oklch(0.55 0.02 90);
+
+  --gym-dot: oklch(0.62 0.14 45);
+  --today-bg: oklch(0.965 0.025 70);
+  --washi: oklch(0.78 0.09 60 / 0.75);
+  --notebook-line: oklch(0.8 0.02 85 / 0.6);
+  --notebook-margin: oklch(0.68 0.09 30 / 0.35);
+
+  --tag-carb-bg: oklch(0.9 0.06 70);
+  --tag-carb-text: oklch(0.42 0.08 55);
+  --tag-protein-bg: oklch(0.88 0.05 25);
+  --tag-protein-text: oklch(0.42 0.09 30);
+  --tag-light-bg: oklch(0.9 0.03 145);
+  --tag-light-text: oklch(0.4 0.06 145);
 }
 
 @theme inline {
+  --color-outer-bg: var(--outer-bg);
   --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-muted: var(--card-muted);
+  --color-border-app: var(--border-app);
+  --color-border-input: var(--border-input);
+
   --color-brand: var(--brand);
   --color-brand-dark: var(--brand-dark);
   --color-brand-light: var(--brand-light);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  --color-foreground: var(--foreground);
+  --color-foreground-brand: var(--foreground-brand);
+  --color-muted: var(--muted);
+  --color-muted-light: var(--muted-light);
+
+  --color-gym-dot: var(--gym-dot);
+  --color-today-bg: var(--today-bg);
+  --color-washi: var(--washi);
+
+  --color-tag-carb-bg: var(--tag-carb-bg);
+  --color-tag-carb-text: var(--tag-carb-text);
+  --color-tag-protein-bg: var(--tag-protein-bg);
+  --color-tag-protein-text: var(--tag-protein-text);
+  --color-tag-light-bg: var(--tag-light-bg);
+  --color-tag-light-text: var(--tag-light-text);
+
+  --font-serif: var(--font-lora);
+  --font-sans: var(--font-karla);
+  --font-hand: var(--font-kalam);
 }
 
 body {
-  background: var(--background);
+  background: var(--outer-bg);
   color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-karla), Arial, Helvetica, sans-serif;
+}
+
+::selection {
+  background: oklch(0.8 0.06 145);
+}
+
+/* Renglones de cuaderno + línea de margen, usado como fondo del listado del Menú */
+.notebook-bg {
+  background-image: repeating-linear-gradient(
+    var(--background) 0 38px,
+    var(--notebook-line) 38px 39px
+  );
+  position: relative;
+}
+
+.notebook-bg::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 14px;
+  width: 1px;
+  background: var(--notebook-margin);
+}
+
+/* Chevron que rota al abrir un <details>, sin el marcador nativo */
+.details-chevron summary {
+  list-style: none;
+}
+.details-chevron summary::-webkit-details-marker {
+  display: none;
+}
+.details-chevron .chevron {
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+.details-chevron[open] > summary .chevron {
+  transform: rotate(180deg);
+}
+.details-chevron[open] > summary .collapsed-text {
+  display: none;
+}
+
+@keyframes fadeSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.details-chevron > div {
+  animation: fadeSlide 0.15s ease;
 }

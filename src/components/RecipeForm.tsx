@@ -14,13 +14,17 @@ import {
 
 const emptyIngredient = (): Ingredient => ({ name: "", quantity: "" });
 
+const fieldLabelClass = "mb-1.5 block text-xs font-bold uppercase tracking-wide text-muted";
+const inputClass =
+  "w-full rounded-xl border p-3 text-[14.5px]";
+const inputStyle = { borderColor: "var(--border-input)", background: "var(--card)", color: "var(--foreground)" };
+
 interface Props {
   onSave: (recipe: Recipe) => Promise<void> | void;
   editingRecipe?: Recipe | null;
-  onCancelEdit?: () => void;
 }
 
-export default function RecipeForm({ onSave, editingRecipe, onCancelEdit }: Props) {
+export default function RecipeForm({ onSave, editingRecipe }: Props) {
   const [name, setName] = useState(editingRecipe?.name ?? "");
   const [category, setCategory] = useState<RecipeCategory>(editingRecipe?.category ?? "principal_pollo");
   const [proteinType, setProteinType] = useState<ProteinType>(editingRecipe?.proteinType ?? "pollo");
@@ -43,7 +47,7 @@ export default function RecipeForm({ onSave, editingRecipe, onCancelEdit }: Prop
   function handleExtract() {
     const parsed = parseIngredientsFromCaption(caption);
     if (parsed.length > 0) {
-      setIngredients(parsed);
+      setIngredients((prev) => [...prev.filter((i) => i.name), ...parsed]);
       setFromInstagram(true);
     }
   }
@@ -101,49 +105,61 @@ export default function RecipeForm({ onSave, editingRecipe, onCancelEdit }: Prop
     await onSave(recipe);
     setSaving(false);
     reset();
-    if (editingRecipe) onCancelEdit?.();
   }
 
+  const tags: { key: "highCarb" | "light" | "highProtein"; label: string; active: boolean; toggle: () => void }[] = [
+    { key: "highCarb", label: "Alta en hidratos", active: highCarb, toggle: () => setHighCarb((v) => !v) },
+    { key: "light", label: "Liviana", active: light, toggle: () => setLight((v) => !v) },
+    { key: "highProtein", label: "Alta en proteína", active: highProtein, toggle: () => setHighProtein((v) => !v) },
+  ];
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border border-brand-light bg-white p-4">
-      <div>
-        <label className="mb-1 block text-sm font-medium text-brand-dark">
-          Pegar receta de Instagram (opcional)
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <div
+        className="rounded-[14px] border border-dashed p-3.5"
+        style={{ background: "oklch(0.955 0.02 60)", borderColor: "oklch(0.7 0.05 50)" }}
+      >
+        <label className="mb-1.5 block text-[13px] font-bold" style={{ color: "oklch(0.42 0.09 45)" }}>
+          Pegar publicación de Instagram
         </label>
         <textarea
           value={caption}
           onChange={(e) => setCaption(e.target.value)}
-          placeholder="Pegá acá el texto de la publicación con los ingredientes..."
+          placeholder="Pegá acá el texto de la publicación para extraer los ingredientes…"
           rows={3}
-          className="w-full rounded-md border border-neutral-200 p-2 text-sm"
+          className="w-full rounded-[10px] border p-2.5 text-[13.5px]"
+          style={{ borderColor: "oklch(0.85 0.05 60)", background: "var(--card)" }}
         />
         <button
           type="button"
           onClick={handleExtract}
           disabled={!caption.trim()}
-          className="mt-2 rounded-md border border-brand px-3 py-1 text-sm text-brand-dark disabled:opacity-40"
+          className="mt-2 rounded-[10px] px-3.5 py-2.5 text-[13px] font-bold disabled:opacity-40"
+          style={{ background: "oklch(0.58 0.1 50)", color: "oklch(0.99 0.01 85)" }}
         >
           Extraer ingredientes
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div>
-          <label className="mb-1 block text-sm font-medium text-brand-dark">Nombre</label>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-md border border-neutral-200 p-2 text-sm"
-            placeholder="Ej: Pollo al horno con papas"
-          />
-        </div>
+      <div>
+        <label className={fieldLabelClass}>Nombre</label>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className={inputClass}
+          style={inputStyle}
+          placeholder="Ej: Pollo al horno con papas"
+        />
+      </div>
 
+      <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="mb-1 block text-sm font-medium text-brand-dark">Categoría</label>
+          <label className={fieldLabelClass}>Categoría</label>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value as RecipeCategory)}
-            className="w-full rounded-md border border-neutral-200 p-2 text-sm"
+            className={inputClass}
+            style={inputStyle}
           >
             {CATEGORY_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -154,11 +170,12 @@ export default function RecipeForm({ onSave, editingRecipe, onCancelEdit }: Prop
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-brand-dark">Proteína principal</label>
+          <label className={fieldLabelClass}>Proteína principal</label>
           <select
             value={proteinType}
             onChange={(e) => setProteinType(e.target.value as ProteinType)}
-            className="w-full rounded-md border border-neutral-200 p-2 text-sm"
+            className={inputClass}
+            style={inputStyle}
           >
             {PROTEIN_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -169,11 +186,12 @@ export default function RecipeForm({ onSave, editingRecipe, onCancelEdit }: Prop
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-brand-dark">Dificultad</label>
+          <label className={fieldLabelClass}>Dificultad</label>
           <select
             value={difficulty}
             onChange={(e) => setDifficulty(e.target.value as Difficulty)}
-            className="w-full rounded-md border border-neutral-200 p-2 text-sm"
+            className={inputClass}
+            style={inputStyle}
           >
             {DIFFICULTY_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -184,11 +202,12 @@ export default function RecipeForm({ onSave, editingRecipe, onCancelEdit }: Prop
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-brand-dark">Comida</label>
+          <label className={fieldLabelClass}>Comida</label>
           <select
             value={mealType}
             onChange={(e) => setMealType(e.target.value as MealType)}
-            className="w-full rounded-md border border-neutral-200 p-2 text-sm"
+            className={inputClass}
+            style={inputStyle}
           >
             {MEAL_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -199,11 +218,12 @@ export default function RecipeForm({ onSave, editingRecipe, onCancelEdit }: Prop
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium text-brand-dark">Época del año</label>
+          <label className={fieldLabelClass}>Época del año</label>
           <select
             value={season}
             onChange={(e) => setSeason(e.target.value as Season)}
-            className="w-full rounded-md border border-neutral-200 p-2 text-sm"
+            className={inputClass}
+            style={inputStyle}
           >
             {SEASON_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -214,65 +234,63 @@ export default function RecipeForm({ onSave, editingRecipe, onCancelEdit }: Prop
         </div>
       </div>
 
-      <div className="space-y-2">
-        <label className="flex items-center gap-2 text-sm text-brand-dark">
-          <input
-            type="checkbox"
-            checked={highProtein}
-            onChange={(e) => setHighProtein(e.target.checked)}
-          />
-          Rica en proteína (priorizar en cenas de días de gimnasio)
-        </label>
-        <label className="flex items-center gap-2 text-sm text-brand-dark">
-          <input
-            type="checkbox"
-            checked={highCarb}
-            onChange={(e) => setHighCarb(e.target.checked)}
-          />
-          Alta en hidratos (priorizar en almuerzos de días de gimnasio)
-        </label>
-        <label className="flex items-center gap-2 text-sm text-brand-dark">
-          <input
-            type="checkbox"
-            checked={light}
-            onChange={(e) => setLight(e.target.checked)}
-          />
-          Liviana (priorizar en días de descanso)
-        </label>
+      <div>
+        <label className={fieldLabelClass}>Tags</label>
+        <div className="flex flex-wrap gap-2">
+          {tags.map((tag) => (
+            <button
+              key={tag.key}
+              type="button"
+              onClick={tag.toggle}
+              className="rounded-full border px-3 py-1.5 text-[12.5px] font-bold"
+              style={
+                tag.active
+                  ? { background: "var(--brand)", borderColor: "var(--brand)", color: "var(--card)" }
+                  : { background: "var(--card)", borderColor: "var(--border-input)", color: "var(--foreground)" }
+              }
+            >
+              {tag.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div>
-        <div className="mb-1 flex items-center justify-between">
-          <label className="block text-sm font-medium text-brand-dark">Ingredientes</label>
+        <div className="mb-1.5 flex items-center justify-between">
+          <label className={fieldLabelClass + " mb-0"}>Ingredientes</label>
           <button
             type="button"
             onClick={() => setIngredients((prev) => [...prev, emptyIngredient()])}
-            className="text-sm text-brand-dark underline"
+            className="text-[12.5px] font-bold"
+            style={{ color: "var(--brand)" }}
           >
-            + agregar
+            + Agregar
           </button>
         </div>
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2">
           {ingredients.map((ing, idx) => (
             <div key={idx} className="flex gap-2">
               <input
                 value={ing.name}
                 onChange={(e) => updateIngredient(idx, "name", e.target.value)}
                 placeholder="Ingrediente"
-                className="flex-1 rounded-md border border-neutral-200 p-2 text-sm"
+                className="flex-[2] rounded-[10px] border p-2.5 text-[13.5px]"
+                style={inputStyle}
               />
               <input
                 value={ing.quantity}
                 onChange={(e) => updateIngredient(idx, "quantity", e.target.value)}
                 placeholder="Cantidad"
-                className="w-28 rounded-md border border-neutral-200 p-2 text-sm"
+                className="flex-1 rounded-[10px] border p-2.5 text-[13.5px]"
+                style={inputStyle}
               />
               <button
                 type="button"
                 onClick={() => removeIngredient(idx)}
-                className="px-2 text-sm text-neutral-400 hover:text-red-500"
+                className="w-9 shrink-0 rounded-[10px] text-[15px]"
+                style={{ background: "var(--card-muted)", color: "oklch(0.5 0.09 30)" }}
               >
-                ✕
+                ×
               </button>
             </div>
           ))}
@@ -280,35 +298,25 @@ export default function RecipeForm({ onSave, editingRecipe, onCancelEdit }: Prop
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-brand-dark">Notas (opcional)</label>
-        <input
+        <label className={fieldLabelClass}>Notas</label>
+        <textarea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          className="w-full rounded-md border border-neutral-200 p-2 text-sm"
+          placeholder="Trucos, tiempos de cocción, variantes…"
+          rows={3}
+          className="w-full rounded-[10px] border p-2.5 text-[13.5px]"
+          style={inputStyle}
         />
       </div>
 
-      <div className="flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-50"
-        >
-          {editingRecipe ? "Guardar cambios" : "Guardar receta"}
-        </button>
-        {editingRecipe && (
-          <button
-            type="button"
-            onClick={() => {
-              reset();
-              onCancelEdit?.();
-            }}
-            className="text-sm text-neutral-500 underline"
-          >
-            Cancelar edición
-          </button>
-        )}
-      </div>
+      <button
+        type="submit"
+        disabled={saving}
+        className="w-full rounded-[14px] py-3.5 text-[15px] font-bold disabled:opacity-50"
+        style={{ background: "var(--brand)", color: "var(--card)" }}
+      >
+        {editingRecipe ? "Guardar cambios" : "Guardar receta"}
+      </button>
     </form>
   );
 }

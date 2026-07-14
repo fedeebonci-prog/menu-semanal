@@ -21,19 +21,20 @@ export default function SettingsPanel({ settings, onSeasonChange, onGymDaysChang
   }
 
   return (
-    <section className="space-y-3 rounded-lg border border-brand-light bg-brand-light/40 p-4">
+    <section className="space-y-3 rounded-2xl border border-border-app bg-card p-3.5">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-sm font-medium text-brand-dark">Estación:</span>
-        <div className="flex overflow-hidden rounded-full border border-brand-light text-sm">
+        <span className="text-xs font-bold uppercase tracking-wide text-muted">Estación</span>
+        <div className="flex gap-1.5">
           {(["verano", "invierno"] as const).map((season) => (
             <button
               key={season}
               onClick={() => onSeasonChange(season)}
-              className={`px-3 py-1 ${
+              className="rounded-full border px-3 py-1 text-xs font-bold"
+              style={
                 settings.season === season
-                  ? "bg-brand text-white"
-                  : "bg-white text-brand-dark"
-              }`}
+                  ? { background: "var(--brand)", borderColor: "var(--brand)", color: "var(--card)" }
+                  : { background: "var(--card)", borderColor: "var(--border-input)", color: "var(--foreground)" }
+              }
             >
               {season === "verano" ? "Verano" : "Invierno"}
             </button>
@@ -42,17 +43,18 @@ export default function SettingsPanel({ settings, onSeasonChange, onGymDaysChang
       </div>
 
       <div>
-        <span className="text-sm font-medium text-brand-dark">Días de gimnasio:</span>
-        <div className="mt-1 flex flex-wrap gap-2">
+        <span className="text-xs font-bold uppercase tracking-wide text-muted">Días de gimnasio</span>
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
           {WEEK_ORDER.map((day) => (
             <button
               key={day}
               onClick={() => toggleDay(day)}
-              className={`rounded-full border px-3 py-1 text-xs ${
+              className="rounded-full border px-3 py-1 text-xs font-bold"
+              style={
                 settings.gymDays.includes(day)
-                  ? "border-brand bg-brand text-white"
-                  : "border-brand-light bg-white text-brand-dark"
-              }`}
+                  ? { background: "var(--brand)", borderColor: "var(--brand)", color: "var(--card)" }
+                  : { background: "var(--card)", borderColor: "var(--border-input)", color: "var(--foreground)" }
+              }
             >
               {WEEKDAY_LABELS[day].slice(0, 3)}
             </button>
