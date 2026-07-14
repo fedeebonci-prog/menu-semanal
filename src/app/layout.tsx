@@ -37,7 +37,10 @@ export default function RootLayout({
       className={`${lora.variable} ${karla.variable} ${kalam.variable} h-full antialiased`}
     >
       <body className="min-h-full flex justify-center bg-outer-bg">
-        <div className="flex min-h-screen w-full max-w-[480px] flex-col bg-background shadow-[0_0_40px_rgba(0,0,0,0.08)]">
+        <div
+          className="flex min-h-screen w-full max-w-[480px] flex-col bg-background"
+          style={{ boxShadow: "0 0 40px rgba(0,0,0,0.08)" }}
+        >
           <div className="flex flex-1 flex-col">{children}</div>
           <Nav />
         </div>
