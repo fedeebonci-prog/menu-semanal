@@ -1,4 +1,4 @@
-import { Recipe, Settings, WeeklyMenu, ShoppingList, ProteinType, MealType, Season, RecipeCategory, Difficulty } from "./types";
+import { Recipe, Settings, WeeklyMenu, ShoppingList, ShoppingListItem, ProteinType, MealType, Season, RecipeCategory, Difficulty } from "./types";
 import { supabase } from "./supabaseClient";
 
 export function newId(): string {
@@ -153,9 +153,30 @@ export async function saveMenu(menu: WeeklyMenu): Promise<void> {
   if (error) throw error;
 }
 
+interface LegacyShoppingListItem {
+  id?: string;
+  name: string;
+  quantity?: string;
+  quantities?: string[];
+  haveIt?: boolean;
+  fromRecipes?: string[];
+}
+
 interface ShoppingListRow {
   week_id: string;
-  items: ShoppingList["items"];
+  items: LegacyShoppingListItem[];
+}
+
+// Normaliza filas guardadas con el formato viejo (sin id, con
+// `quantities: string[]` en vez de `quantity: string`).
+function normalizeShoppingItem(raw: LegacyShoppingListItem): ShoppingListItem {
+  return {
+    id: raw.id ?? newId(),
+    name: raw.name,
+    quantity: raw.quantity ?? raw.quantities?.join(" + ") ?? "",
+    haveIt: raw.haveIt ?? false,
+    fromRecipes: raw.fromRecipes ?? [],
+  };
 }
 
 export async function getShoppingList(weekId: string): Promise<ShoppingList | null> {
@@ -165,7 +186,7 @@ export async function getShoppingList(weekId: string): Promise<ShoppingList | nu
     .eq("week_id", weekId)
     .maybeSingle<ShoppingListRow>();
   if (error) throw error;
-  return data ? { weekId: data.week_id, items: data.items } : null;
+  return data ? { weekId: data.week_id, items: data.items.map(normalizeShoppingItem) } : null;
 }
 
 export async function saveShoppingList(list: ShoppingList): Promise<void> {

@@ -1,11 +1,10 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ShoppingList } from "@/lib/types";
+import { ShoppingList, ShoppingListItem } from "@/lib/types";
 import { addDays, defaultWeekStart, formatWeekRange } from "@/lib/dateUtils";
-import { getShoppingList, saveShoppingList } from "@/lib/store";
-import { sortShoppingItems } from "@/lib/shoppingList";
+import { getShoppingList, saveShoppingList, newId } from "@/lib/store";
 import ShoppingListView from "@/components/ShoppingListView";
 
 function ComprasContent() {
@@ -16,6 +15,7 @@ function ComprasContent() {
   const [list, setList] = useState<ShoppingList | null>(null);
   const [loadedWeekId, setLoadedWeekId] = useState<string | null>(null);
   const [manualInput, setManualInput] = useState("");
+  const addInputRef = useRef<HTMLInputElement>(null);
   const loading = loadedWeekId !== weekId;
 
   useEffect(() => {
@@ -29,37 +29,41 @@ function ComprasContent() {
     router.push(`/compras?week=${newWeekId}`);
   }
 
-  async function handleToggle(name: string) {
-    if (!list) return;
-    const updated: ShoppingList = {
-      ...list,
-      items: list.items.map((i) => (i.name === name ? { ...i, haveIt: !i.haveIt } : i)),
-    };
+  async function persist(items: ShoppingListItem[]) {
+    const updated: ShoppingList = { weekId, items };
     setList(updated);
     await saveShoppingList(updated);
   }
 
-  async function handleAdd(e: React.FormEvent) {
+  async function handleToggle(id: string) {
+    if (!list) return;
+    await persist(list.items.map((i) => (i.id === id ? { ...i, haveIt: !i.haveIt } : i)));
+  }
+
+  async function handleUpdate(id: string, changes: { name: string; quantity: string }) {
+    if (!list) return;
+    await persist(list.items.map((i) => (i.id === id ? { ...i, ...changes } : i)));
+  }
+
+  async function handleDelete(id: string) {
+    if (!list) return;
+    await persist(list.items.filter((i) => i.id !== id));
+  }
+
+  async function handleReorder(newItems: ShoppingListItem[]) {
+    await persist(newItems);
+  }
+
+  async function handleAddSubmit(e: React.FormEvent) {
     e.preventDefault();
     const trimmedName = manualInput.trim();
     if (!trimmedName) return;
 
-    const base: ShoppingList = list ?? { weekId, items: [] };
-    const key = trimmedName.toLowerCase();
-    const existing = base.items.find((i) => i.name.trim().toLowerCase() === key);
-    const items = existing ? base.items : [...base.items, { name: trimmedName, haveIt: false, fromRecipes: [], quantities: [] }];
-
-    const updated: ShoppingList = { ...base, items: sortShoppingItems(items) };
-    setList(updated);
+    const base = list ?? { weekId, items: [] };
+    const newItem: ShoppingListItem = { id: newId(), name: trimmedName, quantity: "", haveIt: false, fromRecipes: [] };
+    await persist([...base.items, newItem]);
     setManualInput("");
-    await saveShoppingList(updated);
-  }
-
-  async function handleDeleteItem(name: string) {
-    if (!list) return;
-    const updated: ShoppingList = { ...list, items: list.items.filter((i) => i.name !== name) };
-    setList(updated);
-    await saveShoppingList(updated);
+    addInputRef.current?.focus();
   }
 
   if (loading) {
@@ -96,22 +100,15 @@ function ComprasContent() {
           </button>
         </div>
 
-        <form onSubmit={handleAdd} className="mt-3.5 flex gap-2">
+        <form onSubmit={handleAddSubmit} className="mt-3.5">
           <input
+            ref={addInputRef}
             value={manualInput}
             onChange={(e) => setManualInput(e.target.value)}
-            placeholder="Agregar producto suelto…"
-            className="flex-1 rounded-xl border p-3 text-sm"
+            placeholder="Agregar producto y apretar Enter…"
+            className="w-full rounded-xl border p-3 text-sm"
             style={{ borderColor: "var(--border-input)", background: "var(--card)", color: "var(--foreground)" }}
           />
-          <button
-            type="submit"
-            disabled={!manualInput.trim()}
-            className="rounded-xl px-4 py-3 text-sm font-bold disabled:opacity-50"
-            style={{ background: "var(--brand)", color: "var(--card)" }}
-          >
-            Agregar
-          </button>
         </form>
       </header>
 
@@ -124,9 +121,11 @@ function ComprasContent() {
 
       <div className="flex-1 px-3.5 pb-24 pt-3.5">
         <ShoppingListView
-          list={list ?? { weekId, items: [] }}
+          items={items}
           onToggle={handleToggle}
-          onDelete={handleDeleteItem}
+          onUpdate={handleUpdate}
+          onDelete={handleDelete}
+          onReorder={handleReorder}
         />
       </div>
     </main>

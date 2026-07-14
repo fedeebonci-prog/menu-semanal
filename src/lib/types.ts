@@ -76,10 +76,11 @@ export interface WeeklyMenu {
 }
 
 export interface ShoppingListItem {
+  id: string;
   name: string;
+  quantity: string;
   haveIt: boolean;
   fromRecipes: string[];
-  quantities: string[];
 }
 
 export interface ShoppingList {
